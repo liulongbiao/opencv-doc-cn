@@ -95,4 +95,77 @@ B.release();
 C = C.clone();
 ```
 
+可以看到 `Mat` 和其它数据结构的使用还是很简单的。
+但是高层级的类或者甚至用户创建的数据类型是否能够自动内存管理呢？
+对于它们， OpenCV 提供了类似于 C++11 中 `std::shared_ptr` 的 `Ptr` 模板类。
+因此，取之使用原生的指针：
+
+```c++
+T* ptr = new T(...);
+```
+
+你可以使用：
+
+```c++
+Ptr<T> ptr(new T(...));
+```
+
+或者：
+
+```c++
+Ptr<T> ptr = makePtr<T>(...);
+```
+
+`Ptr<T>` 封装了一个到某个 T 实例的指针和关联该指针的引用计数器。详见 `Ptr` 描述部分。
+
+### 自动对输出数据进行分配
+
+OpenCV 会自动释放内存，同时在大多数时候也会对其输出函数的参数自动分配内存。
+因此如果某个函数具有一或多个输入数组(`cv::Mat` 实例)和一些输出数组，
+其输出数组会被自动分配或重分配。
+这些输出数组的大小和类型由输入数组的大小和类型所决定。
+如果需要的话，这些函数也接收额外的参数来帮助确定输出数组的属性。
+
+如：
+
+```c++
+#include "opencv2/imgproc.hpp"
+#include "opencv2/highgui.hpp"
+
+using namespace cv;
+int main(int, char**)
+{
+    VideoCapture cap(0);
+    if(!cap.isOpened()) return -1;
+
+    Mat frame, edges;
+    namedWindow("edges",1);
+    for(;;)
+    {
+        cap >> frame;
+        cvtColor(frame, edges, COLOR_BGR2GRAY);
+        GaussianBlur(edges, edges, Size(7,7), 1.5, 1.5);
+        Canny(edges, edges, 0, 30, 3);
+        imshow("edges", edges);
+        if(waitKey(30) >= 0) break;
+    }
+    return 0;
+}
+```
+
+其数组 `frame` 由 `>>` 操作符所自动地分配，因为视频帧的分辨率和位深度在视频捕获模块中是已知的。
+其数组 `edges` 由 `cvtColor` 函数自动分配。它具有和输入数组一样的大小和位深度。
+频道的数量为 1 ，因为传入了颜色转换代码 `COLOR_BGR2GRAY`，它意味着将颜色进行灰度转换。
+注意 `frame` 和 `edges` 在整个循环体中仅在第一次执行时进行了分配，因为所有后续的视频帧都具有相同的分辨率。
+若你在某些地方改变了视频的分辨率，则数组会被自动重新分配。
+
+这个技术的关键组件是 `Mat::create` 方法。
+它接收所需的数组大小和类型。
+若数组已经具有指定大小和类型，则该方法什么都不做。
+否则它释放以前(如果有的话)分配的数据，(这部分设计减少引用计数并和 0 做比较)，
+然后分配一个和所需大小一样的新的缓冲区。
+大多数函数对每个输出函数调用了 `Mat::create` 方法，这样自动输出数据的分配被实现。
+
+这种模式的一些显著的例外是 `cv::mixChannels`、 `cv::RNG::fill` 和一些其它的函数和方法。
+它们不能分配输出数组，因此你需要预先分配。
 
