@@ -276,3 +276,32 @@ Mat grayscale(image.size(), CV_MAKETYPE(image.depth(), 1)); // make a 1-channel 
 你可以假设在任何 `InputArray/OutputArray` 的地方，
 你总是可以使用 ` Mat`, `std::vector<>`, `Matx<>`, `Vec<>` 或 `Scalar`。
 当函数具有一个可选的输入或输出数组，而你又不需要或不想传入时，你可以传入 `cv::noArray()` 。
+
+### 错误处理
+
+OpenCV 使用异常来发出重要错误的信号。
+当输入数据具有正确的格式且属于指定的值范围，但算法因某些原因没有成功时(如优化算法没有收敛)，
+它返回特殊的错误代码(通常为一个布尔值)。
+
+异常可以是 `cv::Exception` 类或其派生类的实例。而 `cv::Exception` 派生自 `std::exception`。
+因此它可以被其它标准 C++ 类库组件优雅地处理。
+
+异常通常使用 `CV_Error(errcode, description)` 宏或者其类似于 printf 的变体
+`CV_Error_(errcode, printf-spec, (printf-args))` 来抛出，
+或者使用 ` CV_Assert(condition)` 宏来检验条件并在不满足时抛出一个异常。
+对性能关键的代码，其 `CV_DbgAssert(condition)` 仅会在调试配置中被保留。
+由于有自动内存管理，所有中间缓冲会在突发错误时被自动释放。
+你只需要在需要的地方添加一个 `try` 语句来捕获异常：
+
+```c++
+try
+{
+    ... // call OpenCV
+}
+catch( cv::Exception& e )
+{
+    const char* err_msg = e.what();
+    std::cout << "exception caught: " << err_msg << std::endl;
+}
+```
+
