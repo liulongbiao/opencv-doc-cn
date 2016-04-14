@@ -264,9 +264,15 @@ Mat grayscale(image.size(), CV_MAKETYPE(image.depth(), 1)); // make a 1-channel 
 
 每个函数所支持的类型子集是从实际所需来定义，且后续可能会根据用户需要进行扩展。
 
+### InputArray 和 OutputArray
 
-
-
-
-
-
+很多 OpenCV 函数处理的是稠密2维或多维数值数组。
+通常这些函数接收 `cppMat` 作为参数，但在某些情况下，
+使用 `std::vector<>` (如对于点集) 或 `Matx<>` (对3x3单应矩阵等) 会更方便。
+为避免在 API 中的重复定义，会引入特殊的 "代理" 类。
+基础的 "代理" 类是 `InputArray`。它用于给函数输入传入只读数组。
+派生自 `InputArray` 的 `OutputArray` 类用于给函数指定一个输出数组。
+通常你不需要关注这些中间类型(并且不应该明确地声明这些类型的变量) - 它自己会运作。
+你可以假设在任何 `InputArray/OutputArray` 的地方，
+你总是可以使用 ` Mat`, `std::vector<>`, `Matx<>`, `Vec<>` 或 `Scalar`。
+当函数具有一个可选的输入或输出数组，而你又不需要或不想传入时，你可以传入 `cv::noArray()` 。
